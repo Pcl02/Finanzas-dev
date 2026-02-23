@@ -210,12 +210,28 @@ a { text-decoration: none; color: inherit; }
 /* ─────────────────────────────────────────────
    TIMELINE HORIZONTAL
 ───────────────────────────────────────────── */
-.tl-page { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
+.tl-page { display: none; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
+.tl-page.active { display: flex; }
 #tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
 #tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-#tl-lista { flex: 1; overflow-y: auto; }
+#tl-lista { flex: 1; overflow-y: auto; padding: 8px 14px 24px; }
+.tl-controls { display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; flex-shrink: 0; }
+.tl-controls label { font-size: 13px; color: var(--text2); }
+.tl-controls select { background: var(--bg2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.tl-month { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 6px; padding-left: 2px; }
+.tl-item { display: flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: default; }
+.tl-item.tappable { cursor: pointer; }
+.tl-item.tappable:active { opacity: .7; }
+.tl-date { font-size: 11px; font-weight: 700; color: var(--text2); min-width: 28px; text-align: center; line-height: 1.2; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.tl-right { text-align: right; flex-shrink: 0; }
+.tl-amount { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+.tl-saldo { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
 #tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 #tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
@@ -880,8 +896,8 @@ var State = {
 // ══════════════════════════════════════════════════════
 //  CREDENCIALES — edita estas dos líneas y sube el archivo
 // ══════════════════════════════════════════════════════
-var SUPABASE_URL = 'https://djyhjfvdusxitwjqvvjf.supabase.co';
-var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqeWhqZnZkdXN4aXR3anF2dmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MzUwNTksImV4cCI6MjA4NzExMTA1OX0.ieRl1Z5WG2I3wKg06dwl4Vwfw-BrKyOeMQKgjq8HhfY';
+var SUPABASE_URL = 'TU_URL_AQUI';
+var SUPABASE_KEY = 'TU_CLAVE_AQUI';
 // ══════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1410,22 +1426,21 @@ function initTimeline() {
   updateCursorLine();
   updateCursorInfo();
 
-  // Bind scroll — no snapping, smooth cursor update
-  var newWrap = wrap.cloneNode(false);
-  while (wrap.firstChild) newWrap.appendChild(wrap.firstChild);
-  wrap.parentNode.replaceChild(newWrap, wrap);
+  // Bind scroll — solo la primera vez (evita listeners duplicados)
+  if (!TL._scrollBound) {
+    TL._scrollBound = true;
+    wrap.addEventListener('scroll', function() {
+      var center = wrap.scrollLeft + wrap.clientWidth / 2;
+      var dayIdx = Math.min(Math.max(Math.floor(center / TL.colW), 0), TL.dias.length - 1);
+      if (dayIdx !== TL.cursorDay) {
+        TL.cursorDay = dayIdx;
+        updateCursorLine();
+        updateCursorInfo();
+      }
+    }, { passive: true });
+  }
 
-  newWrap.addEventListener('scroll', function() {
-    var center = newWrap.scrollLeft + newWrap.clientWidth / 2;
-    var dayIdx = Math.min(Math.max(Math.floor(center / TL.colW), 0), TL.dias.length - 1);
-    if (dayIdx !== TL.cursorDay) {
-      TL.cursorDay = dayIdx;
-      updateCursorLine();
-      updateCursorInfo();
-    }
-  }, { passive: true });
-
-  // Today button
+  // Today button (asignación directa, sin duplicar)
   var btnToday = document.getElementById('btn-tl-today');
   if (btnToday) {
     btnToday.onclick = function() {
@@ -1436,7 +1451,7 @@ function initTimeline() {
     };
   }
 
-  // View toggle
+  // View toggle (asignación directa)
   var viewTabs = document.getElementById('tl-view-tabs');
   if (viewTabs) {
     viewTabs.querySelectorAll('.ftab').forEach(function(tab) {
@@ -2199,6 +2214,7 @@ function setStatsPeriod(meses) {
 //  NAVEGACIÓN
 // ══════════════════════════════════════════════════════
 function navigateTo(page) {
+  if (State.page === 'timeline' && page !== 'timeline') TL._scrollBound = false;
   State.page = page;
   closeDetail();
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
