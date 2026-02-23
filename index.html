@@ -771,6 +771,13 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 <!-- Toast -->
 <div class="toast hidden" id="toast"></div>
 
+<!-- Timeline click popup -->
+<div id="tl-click-popup" class="hidden" style="position:fixed;z-index:300;background:#1e2a3d;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:180px;">
+  <div id="tl-popup-date" style="font-size:11px;color:#6b7a94;padding:6px 10px 4px;font-weight:600;"></div>
+  <button id="tl-popup-tx" style="display:block;width:100%;text-align:left;background:none;border:none;color:#e8edf5;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">📒 Transacción</button>
+  <button id="tl-popup-prog" style="display:block;width:100%;text-align:left;background:none;border:none;color:#e8edf5;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">📅 Programada</button>
+</div>
+
 <script>
 'use strict';
 // ══════════════════════════════════════════════════════
@@ -1511,6 +1518,8 @@ function initTimeline() {
     // Drag con ratón (escritorio)
     wrap.addEventListener('mousedown', function(e) {
       TL.dragging = true;
+      TL._didDrag = false;
+      TL._dragMoved = 0;
       TL.dragStartX = e.pageX;
       TL.dragScrollLeft = wrap.scrollLeft;
       wrap.style.cursor = 'grabbing';
@@ -1519,6 +1528,8 @@ function initTimeline() {
     document.addEventListener('mousemove', function(e) {
       if (!TL.dragging) return;
       var dx = e.pageX - TL.dragStartX;
+      TL._dragMoved += Math.abs(e.movementX || 0);
+      if (TL._dragMoved > 4) TL._didDrag = true;
       wrap.scrollLeft = TL.dragScrollLeft - dx;
     });
     document.addEventListener('mouseup', function() {
@@ -1566,6 +1577,67 @@ function initTimeline() {
       var meses = parseInt(document.getElementById('tl-meses').value) || 6;
       generarTimeline(meses).then(function(evs) { D.timeline = evs; renderTimeline(); });
     };
+  }
+
+  // Canvas click → popup nueva tx/prog
+  var canvas = document.getElementById('tl-canvas');
+  var popup  = document.getElementById('tl-click-popup');
+  if (canvas && popup) {
+    canvas.addEventListener('click', function(e) {
+      // Si hubo drag no abrir popup
+      if (TL._didDrag) return;
+      var rect    = canvas.getBoundingClientRect();
+      var clickX  = e.clientX - rect.left;
+      var clickY  = e.clientY - rect.top;
+      // Día clicado
+      var dayIdx  = Math.min(Math.max(Math.floor(clickX / TL.colW), 0), TL.dias.length - 1);
+      var fecha   = TL.dias[dayIdx].fecha;
+      // Fila (cuenta) clicada
+      var rowIdx  = Math.floor((clickY - TL.padTop) / TL.rowH);
+      var cuenta  = (D.cuentas[rowIdx] && rowIdx >= 0) ? D.cuentas[rowIdx] : null;
+      // Guardar en TL para uso posterior
+      TL.clickFecha  = fecha;
+      TL.clickCuenta = cuenta ? cuenta.id : null;
+      // Mostrar popup cerca del clic
+      var d = new Date(fecha + 'T12:00:00');
+      document.getElementById('tl-popup-date').textContent = d.toLocaleDateString('es', { weekday:'short', day:'numeric', month:'long' }) + (cuenta ? ' · ' + cuenta.nombre : '');
+      var px = Math.min(e.clientX, window.innerWidth - 200);
+      var py = Math.min(e.clientY + 8, window.innerHeight - 120);
+      popup.style.left = px + 'px';
+      popup.style.top  = py + 'px';
+      popup.classList.remove('hidden');
+    });
+
+    // Cerrar popup al clicar fuera
+    document.addEventListener('click', function(e) {
+      if (!popup.classList.contains('hidden') && !popup.contains(e.target) && e.target !== canvas) {
+        popup.classList.add('hidden');
+      }
+    });
+
+    // Botón Transacción
+    document.getElementById('tl-popup-tx').onclick = function() {
+      popup.classList.add('hidden');
+      openModalTx();
+      // Preseleccionar fecha y cuenta
+      document.getElementById('tx-fecha').value = TL.clickFecha || today();
+      if (TL.clickCuenta) document.getElementById('tx-cuenta-origen').value = TL.clickCuenta;
+    };
+
+    // Botón Programada
+    document.getElementById('tl-popup-prog').onclick = function() {
+      popup.classList.add('hidden');
+      openModalProg();
+      // Preseleccionar fecha y cuenta
+      document.getElementById('prog-inicio').value = TL.clickFecha || today();
+      if (TL.clickCuenta) document.getElementById('prog-cuenta').value = TL.clickCuenta;
+    };
+
+    // Hover en botones del popup
+    [document.getElementById('tl-popup-tx'), document.getElementById('tl-popup-prog')].forEach(function(btn) {
+      btn.addEventListener('mouseenter', function() { btn.style.background = 'rgba(77,143,255,.15)'; });
+      btn.addEventListener('mouseleave', function() { btn.style.background = 'none'; });
+    });
   }
 }
 
