@@ -211,7 +211,12 @@ a { text-decoration: none; color: inherit; }
    TIMELINE HORIZONTAL
 ───────────────────────────────────────────── */
 .tl-page { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
-#tl-header { padding: 12px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+#tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
+/* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.tl-today-btn:active { opacity: .7; }
+#tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+#tl-lista { flex: 1; overflow-y: auto; }
+#tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 #tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
 .tl-saldo-pill { font-size: 11px; background: var(--bg3); border-radius: 99px; padding: 3px 10px; font-family: var(--mono); }
@@ -225,8 +230,6 @@ a { text-decoration: none; color: inherit; }
 #tl-canvas-wrap { position: relative; height: 100%; }
 #tl-canvas { display: block; height: 100%; }
 #tl-cursor-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--blue); opacity: .8; pointer-events: none; transform: translateX(-50%); }
-#tl-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
-#tl-range-label { font-size: 12px; color: var(--text2); }
 
 /* ─────────────────────────────────────────────
    FAB
@@ -466,22 +469,37 @@ button:disabled { opacity: .5; cursor: not-allowed; }
     <section class="page" id="page-transacciones"></section>
     <section class="page" id="page-programadas"></section>
     <section class="page tl-page" id="page-timeline">
-      <div id="tl-header">
-        <div id="tl-cursor-info">
-          <div id="tl-cursor-date"></div>
-          <div id="tl-cursor-saldos"></div>
+      <div id="tl-topbar">
+        <div class="filter-tabs" id="tl-view-tabs">
+          <button class="ftab active" data-view="visual">Visual</button>
+          <button class="ftab" data-view="lista">Lista</button>
         </div>
-        <div id="tl-cursor-movs"></div>
-      </div>
-      <div id="tl-scroll-wrap">
-        <div id="tl-canvas-wrap">
-          <canvas id="tl-canvas"></canvas>
-          <div id="tl-cursor-line"></div>
-        </div>
-      </div>
-      <div id="tl-footer">
         <button class="btn-sm" id="btn-tl-today">Hoy</button>
-        <span id="tl-range-label"></span>
+      </div>
+      <!-- Vista visual -->
+      <div id="tl-visual">
+        <div id="tl-header">
+          <div id="tl-cursor-info">
+            <div id="tl-cursor-date"></div>
+            <div id="tl-cursor-saldos"></div>
+          </div>
+          <div id="tl-cursor-movs"></div>
+        </div>
+        <div id="tl-scroll-wrap">
+          <div id="tl-canvas-wrap">
+            <canvas id="tl-canvas"></canvas>
+            <div id="tl-cursor-line"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Vista lista -->
+      <div id="tl-lista" class="hidden">
+        <div class="tl-controls">
+          <label>Proyectar</label>
+          <select id="tl-meses"><option value="3">3 meses</option><option value="6" selected>6 meses</option><option value="12">12 meses</option><option value="24">24 meses</option></select>
+          <button class="btn-sm" id="btn-tl-refresh">Actualizar</button>
+        </div>
+        <div id="timeline-list"></div>
       </div>
     </section>
     <section class="page" id="page-presupuestos"></section>
@@ -1168,14 +1186,113 @@ function renderTimelinePage() {
   initTimeline();
 }
 
+async function generarTimeline(meses) {
+  var hoy     = new Date();
+  var limite  = new Date(hoy); limite.setMonth(limite.getMonth() + meses);
+  var eventos = [];
+  var saldoTotal = D.cuentas.reduce(function(s, c) { return s + (parseFloat(c.saldo_actual) || 0); }, 0);
+
+  D.programadas.forEach(function(prog) {
+    expandirProgramada(prog, hoy, limite).forEach(function(fecha) {
+      var cuenta = D.cuentas.find(function(c) { return c.id === prog.cuenta_origen; });
+      eventos.push({ fecha: fmtDate(fecha), nombre: prog.nombre, tipo: prog.tipo, cuentaOrigen: cuenta ? cuenta.nombre : '', importe: parseFloat(prog.importe), origen: 'Programada', progId: prog.id });
+    });
+  });
+
+  D.deudas.forEach(function(d) {
+    var pendiente = parseFloat(d.importe) - parseFloat(d.importe_pagado || 0);
+    if (!d.fecha_limite || pendiente <= 0) return;
+    var fl = new Date(d.fecha_limite + 'T12:00:00');
+    if (fl < hoy || fl > limite) return;
+    var contacto = D.contactos.find(function(c) { return c.id === d.contacto_id; });
+    eventos.push({ fecha: d.fecha_limite, nombre: (d.tipo === 'Me deben' ? '💰 ' : '💸 ') + d.concepto + (contacto ? ' (' + contacto.nombre + ')' : ''), tipo: d.tipo === 'Me deben' ? 'Ingreso' : 'Gasto', cuentaOrigen: '', importe: pendiente, origen: 'Deuda' });
+  });
+
+  D.objetivos.forEach(function(o) {
+    if (!o.fecha_limite || o.estado === 'completado') return;
+    var fl = new Date(o.fecha_limite + 'T12:00:00');
+    if (fl < hoy || fl > limite) return;
+    eventos.push({ fecha: o.fecha_limite, nombre: '🎯 ' + o.nombre, tipo: 'Objetivo', cuentaOrigen: '', importe: parseFloat(o.restante) || 0, origen: 'Objetivo' });
+  });
+
+  eventos.sort(function(a, b) { return a.fecha.localeCompare(b.fecha); });
+  var saldo = saldoTotal;
+  eventos.forEach(function(ev) {
+    if (ev.tipo === 'Ingreso') saldo += ev.importe;
+    else if (ev.tipo === 'Gasto') saldo -= ev.importe;
+    ev.saldoProyectado = saldo;
+  });
+  return eventos;
+}
+
+function renderTimeline() {
+  var l = document.getElementById('timeline-list');
+  var items = D.timeline || [];
+  if (!items.length) { l.innerHTML = emptyState('No hay proyección'); return; }
+  var html = '', lastMonth = '';
+  items.forEach(function(ev) {
+    var mes = ev.fecha.substring(0, 7);
+    if (mes !== lastMonth) {
+      lastMonth = mes;
+      var parts = mes.split('-');
+      html += '<div class="tl-month">' + new Date(parts[0], parts[1]-1).toLocaleString('es', {month:'long', year:'numeric'}) + '</div>';
+    }
+    var t     = ev.tipo.toLowerCase();
+    var color = t === 'ingreso' ? 'var(--green)' : t === 'gasto' ? 'var(--red)' : t === 'objetivo' ? 'var(--yellow)' : 'var(--blue)';
+    var signo = t === 'ingreso' ? '+' : t === 'gasto' ? '−' : '';
+    var isTap = ev.origen === 'Programada' && ev.progId;
+    html += '<div class="tl-item' + (isTap ? ' tappable' : '') + '"' + (isTap ? ' data-detail-tipo="prog" data-detail-id="' + ev.progId + '"' : '') + '>';
+    html += '<div class="tl-date">' + ev.fecha.substring(5) + '</div>';
+    html += '<div class="tl-dot" style="background:' + color + '"></div>';
+    html += '<div class="tl-body"><div class="tl-name">' + esc(ev.nombre) + '</div>';
+    html += '<div class="tl-meta">' + ev.origen + (ev.cuentaOrigen ? ' · ' + ev.cuentaOrigen : '') + '</div></div>';
+    html += '<div class="tl-right"><div class="tl-amount" style="color:' + color + '">' + signo + fmt(ev.importe) + '</div>';
+    html += '<div class="tl-saldo">→ ' + fmt(ev.saldoProyectado) + '</div></div></div>';
+  });
+  l.innerHTML = html;
+}
+
+function renderTimelineLista() {
+  var l = document.getElementById('timeline-list');
+  l.innerHTML = '<div class="loader-wrap"><div class="loader-sm"></div></div>';
+  var meses = parseInt(document.getElementById('tl-meses').value) || 6;
+  generarTimeline(meses).then(function(evs) {
+    D.timeline = evs;
+    TL.listaLoaded = true;
+    var items = evs;
+    if (!items.length) { l.innerHTML = emptyState('No hay proyección'); return; }
+    var html = '', lastMonth = '';
+    items.forEach(function(ev) {
+      var mes = ev.fecha.substring(0, 7);
+      if (mes !== lastMonth) {
+        lastMonth = mes;
+        var parts = mes.split('-');
+        html += '<div class="tl-month">' + new Date(parts[0], parts[1]-1).toLocaleString('es', {month:'long', year:'numeric'}) + '</div>';
+      }
+      var t     = ev.tipo.toLowerCase();
+      var color = t==='ingreso' ? 'var(--green)' : t==='gasto' ? 'var(--red)' : t==='objetivo' ? 'var(--yellow)' : 'var(--blue)';
+      var signo = t==='ingreso' ? '+' : t==='gasto' ? '−' : '';
+      var isTap = ev.origen === 'Programada' && ev.progId;
+      html += '<div class="tl-item' + (isTap ? ' tappable' : '') + '"' + (isTap ? ' data-detail-tipo="prog" data-detail-id="' + ev.progId + '"' : '') + '>';
+      html += '<div class="tl-date">' + ev.fecha.substring(5) + '</div>';
+      html += '<div class="tl-dot" style="background:' + color + '"></div>';
+      html += '<div class="tl-body"><div class="tl-name">' + esc(ev.nombre) + '</div>';
+      html += '<div class="tl-meta">' + ev.origen + (ev.cuentaOrigen ? ' · ' + ev.cuentaOrigen : '') + '</div></div>';
+      html += '<div class="tl-right"><div class="tl-amount" style="color:' + color + '">' + signo + fmt(ev.importe) + '</div>';
+      html += '<div class="tl-saldo">→ ' + fmt(ev.saldoProyectado) + '</div></div></div>';
+    });
+    l.innerHTML = html;
+  }).catch(function() { l.innerHTML = emptyState('Error al calcular'); });
+}
+
 // ── Timeline state ──────────────────────────────────────
 var TL = {
   dias: [],        // array of {fecha, eventos:[], saldos:{cuentaId: saldo}}
   colW: 44,        // px per day column
   rowH: 52,        // px per account row
   padTop: 32,      // header row height
-  cursorDay: null, // index of cursor
-  dragging: false,
+  cursorDay: null,
+  listaLoaded: false,
   dragStartX: 0,
   dragScrollLeft: 0,
 };
@@ -1214,91 +1331,93 @@ function initTimeline() {
   var wrap = document.getElementById('tl-scroll-wrap');
   if (!wrap) return;
 
-  // Build 60 days: 30 past + today + 29 future
-  var hoy     = new Date(); hoy.setHours(0,0,0,0);
+  // Build 730 days: 365 past + 365 future
+  var hoy      = new Date(); hoy.setHours(0,0,0,0);
   var todayStr = fmtDate(hoy);
-  var dias    = [];
-  for (var i = -30; i <= 60; i++) {
+  var PAST = 365, FUTURE = 365;
+  var dias = [];
+  for (var i = -PAST; i <= FUTURE; i++) {
     var d = new Date(hoy); d.setDate(d.getDate() + i);
     dias.push({ fecha: fmtDate(d), eventos: [], saldos: {} });
   }
   TL.dias = dias;
 
-  // Populate eventos from real transactions
+  // Real transactions
   D.transacciones.forEach(function(t) {
     var day = dias.find(function(d) { return d.fecha === t.fecha; });
-    if (day) day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real', id: t.id });
+    if (day) day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real' });
   });
 
-  // Populate eventos from programadas (próximos 60 días)
-  var limite = new Date(hoy); limite.setDate(limite.getDate() + 61);
+  // Programadas (future only)
+  var limite = new Date(hoy); limite.setDate(limite.getDate() + FUTURE + 1);
   D.programadas.filter(function(p){return p.activa;}).forEach(function(prog) {
     expandirProgramada(prog, hoy, limite).forEach(function(fecha) {
       var f = fmtDate(fecha);
       var day = dias.find(function(d) { return d.fecha === f; });
-      if (day) day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog', id: prog.id });
+      if (day) day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog' });
     });
   });
 
-  // Calculate running saldo per account per day
-  var cuentas = D.cuentas;
-  // Start from saldo_actual (already accounts for past transactions)
-  var saldos = {};
+  // Saldos: seed at today, forward and backward
+  var cuentas  = D.cuentas;
+  var todayIdx = dias.findIndex(function(d){ return d.fecha === todayStr; });
+  var saldos   = {};
   cuentas.forEach(function(cu) { saldos[cu.id] = parseFloat(cu.saldo_actual) || 0; });
 
-  // Roll back to 30 days ago by subtracting future, adding past
-  // Simpler: calculate from saldo_inicial + all transactions up to each day
-  dias.forEach(function(day) {
-    // Apply events of this day
-    day.eventos.forEach(function(ev) {
+  // Forward
+  var sf = Object.assign({}, saldos);
+  for (var i = todayIdx; i < dias.length; i++) {
+    dias[i].eventos.forEach(function(ev) {
       if (!ev.cuentaId) return;
-      if (ev.tipo === 'Ingreso')    saldos[ev.cuentaId] = (saldos[ev.cuentaId] || 0) + ev.importe;
-      else if (ev.tipo === 'Gasto') saldos[ev.cuentaId] = (saldos[ev.cuentaId] || 0) - ev.importe;
+      if      (ev.tipo === 'Ingreso') sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
+      else if (ev.tipo === 'Gasto')   sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
     });
-    // Snapshot saldos for this day
-    day.saldos = Object.assign({}, saldos);
-  });
+    dias[i].saldos = Object.assign({}, sf);
+  }
 
-  // Build canvas
-  var canvas = document.getElementById('tl-canvas');
+  // Backward
+  var sb = Object.assign({}, saldos);
+  for (var j = todayIdx - 1; j >= 0; j--) {
+    dias[j+1].eventos.forEach(function(ev) {
+      if (!ev.cuentaId || ev.origen !== 'real') return;
+      if      (ev.tipo === 'Ingreso') sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
+      else if (ev.tipo === 'Gasto')   sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
+    });
+    dias[j].saldos = Object.assign({}, sb);
+  }
+
+  // Canvas sizing — fill full available height
+  var canvas   = document.getElementById('tl-canvas');
+  var scrollEl = document.getElementById('tl-scroll-wrap');
   if (!canvas) return;
-  var cols   = dias.length;
-  var rows   = cuentas.length;
-  var width  = cols * TL.colW;
-  var height = TL.padTop + rows * TL.rowH + 20;
+  var visH  = scrollEl.clientHeight || (window.innerHeight - 200);
+  var rows  = Math.max(cuentas.length, 1);
+  TL.rowH   = Math.floor((visH - TL.padTop - 4) / rows);
+  var width  = dias.length * TL.colW;
+  var height = visH;
 
-  canvas.width  = width;
-  canvas.height = height;
-  canvas.style.width  = width + 'px';
-  canvas.style.height = height + 'px';
+  canvas.width  = width;  canvas.height  = height;
+  canvas.style.width  = width + 'px'; canvas.style.height = height + 'px';
   document.getElementById('tl-canvas-wrap').style.width  = width + 'px';
   document.getElementById('tl-canvas-wrap').style.height = height + 'px';
 
   drawTimeline();
 
-  // Scroll to today (index 30)
-  var todayIdx = dias.findIndex(function(d){return d.fecha === todayStr;});
-  TL.cursorDay = todayIdx >= 0 ? todayIdx : 30;
-
-  // Position cursor line in center of visible area
+  // Scroll to today
+  TL.cursorDay = todayIdx;
   var scrollWrap = document.getElementById('tl-scroll-wrap');
-  var centerX    = TL.cursorDay * TL.colW + TL.colW/2;
-  var visibleW   = scrollWrap.clientWidth;
-  scrollWrap.scrollLeft = centerX - visibleW/2;
+  scrollWrap.scrollLeft = todayIdx * TL.colW + TL.colW/2 - scrollWrap.clientWidth/2;
   updateCursorLine();
   updateCursorInfo();
 
-  // Bind events (remove old listeners by cloning)
+  // Bind scroll — no snapping, smooth cursor update
   var newWrap = wrap.cloneNode(false);
   while (wrap.firstChild) newWrap.appendChild(wrap.firstChild);
   wrap.parentNode.replaceChild(newWrap, wrap);
 
-  // Scroll → update cursor
   newWrap.addEventListener('scroll', function() {
-    var visW   = newWrap.clientWidth;
-    var center = newWrap.scrollLeft + visW/2;
-    var dayIdx = Math.round((center - TL.colW/2) / TL.colW);
-    dayIdx = Math.max(0, Math.min(TL.dias.length-1, dayIdx));
+    var center = newWrap.scrollLeft + newWrap.clientWidth / 2;
+    var dayIdx = Math.min(Math.max(Math.floor(center / TL.colW), 0), TL.dias.length - 1);
     if (dayIdx !== TL.cursorDay) {
       TL.cursorDay = dayIdx;
       updateCursorLine();
@@ -1306,23 +1425,46 @@ function initTimeline() {
     }
   }, { passive: true });
 
-  // Bind today button
+  // Today button
   var btnToday = document.getElementById('btn-tl-today');
   if (btnToday) {
     btnToday.onclick = function() {
-      TL.cursorDay = todayIdx >= 0 ? todayIdx : 30;
-      var cX = TL.cursorDay * TL.colW + TL.colW/2;
-      var vW = document.getElementById('tl-scroll-wrap').clientWidth;
-      document.getElementById('tl-scroll-wrap').scrollTo({ left: cX - vW/2, behavior: 'smooth' });
+      TL.cursorDay = todayIdx;
+      var cX = todayIdx * TL.colW + TL.colW/2;
+      document.getElementById('tl-scroll-wrap').scrollTo({ left: cX - document.getElementById('tl-scroll-wrap').clientWidth/2, behavior: 'smooth' });
       updateCursorInfo();
     };
   }
 
-  // Range label
-  var first = dias[0].fecha, last = dias[dias.length-1].fecha;
-  var rangeEl = document.getElementById('tl-range-label');
-  if (rangeEl) rangeEl.textContent = fmtDateEs(first) + ' – ' + fmtDateEs(last);
+  // View toggle
+  var viewTabs = document.getElementById('tl-view-tabs');
+  if (viewTabs) {
+    viewTabs.querySelectorAll('.ftab').forEach(function(tab) {
+      tab.onclick = function() {
+        viewTabs.querySelectorAll('.ftab').forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        var view = tab.getAttribute('data-view');
+        document.getElementById('tl-visual').classList.toggle('hidden', view !== 'visual');
+        document.getElementById('tl-lista').classList.toggle('hidden', view !== 'lista');
+        document.getElementById('btn-tl-today').style.display = view === 'visual' ? '' : 'none';
+        if (view === 'lista') {
+          var meses = parseInt(document.getElementById('tl-meses').value) || 6;
+          generarTimeline(meses).then(function(evs) { D.timeline = evs; renderTimeline(); });
+        }
+      };
+    });
+  }
+
+  // Lista refresh
+  var btnRefresh = document.getElementById('btn-tl-refresh');
+  if (btnRefresh) {
+    btnRefresh.onclick = function() {
+      var meses = parseInt(document.getElementById('tl-meses').value) || 6;
+      generarTimeline(meses).then(function(evs) { D.timeline = evs; renderTimeline(); });
+    };
+  }
 }
+
 
 function fmtDateEs(str) {
   var d = new Date(str + 'T12:00:00');
@@ -1453,11 +1595,13 @@ function drawTimeline() {
   });
 }
 
-function updateCursorLine() {
+function updateCursorLine(exactX) {
   var line = document.getElementById('tl-cursor-line');
   if (!line) return;
-  var dayIdx = TL.cursorDay;
-  var x      = dayIdx * TL.colW + TL.colW/2;
+  var wrap = document.getElementById('tl-scroll-wrap');
+  if (!wrap) return;
+  // Always pin to center of visible area
+  var x = (exactX !== undefined) ? exactX : (wrap.scrollLeft + wrap.clientWidth / 2);
   line.style.left = x + 'px';
 }
 
@@ -1803,7 +1947,27 @@ function bindAll() {
   });
 
   // Timeline refresh
-  // timeline refresh handled by initTimeline
+  // Timeline view toggle
+  var tlTabs = document.getElementById('tl-view-tabs');
+  if (tlTabs) {
+    tlTabs.addEventListener('click', function(e) {
+      var tab = e.target.closest('.ftab');
+      if (!tab) return;
+      var view = tab.getAttribute('data-view');
+      tlTabs.querySelectorAll('.ftab').forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('tl-visual').classList.toggle('hidden', view !== 'visual');
+      document.getElementById('tl-lista').classList.toggle('hidden', view !== 'lista');
+      document.getElementById('btn-tl-today').style.display = view === 'visual' ? '' : 'none';
+      if (view === 'lista' && !TL.listaLoaded) {
+        TL.listaLoaded = false;
+        renderTimelineLista();
+      }
+    });
+  }
+  // Lista refresh button
+  var btnRefresh = document.getElementById('btn-tl-refresh');
+  if (btnRefresh) btnRefresh.addEventListener('click', function() { TL.listaLoaded = false; renderTimelineLista(); });
 
   // Form saves — onclick para evitar listeners duplicados
   document.getElementById('btn-save-tx').onclick           = saveTx;
