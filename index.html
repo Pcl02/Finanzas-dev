@@ -228,7 +228,7 @@ a { text-decoration: none; color: inherit; }
 ───────────────────────────────────────────── */
 .tl-page { padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
 .tl-page.active { display: flex !important; flex-direction: column; }
-#tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
+#tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; height: 44px; box-sizing: border-box; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
 #tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
@@ -240,10 +240,11 @@ a { text-decoration: none; color: inherit; }
 .tl-tooltip-name { font-weight: 600; margin-bottom: 3px; }
 .tl-tooltip-meta { color: var(--text2); font-size: 11px; }
 .tl-tooltip-amount { font-family: var(--mono); font-weight: 700; margin-top: 4px; }
-#tl-zoom-bar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+#tl-scroll-wrap { height: calc(100vh - 56px - 44px - 100px - 38px - env(safe-area-inset-bottom)); overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; cursor: grab; position: relative; flex-shrink: 0; }
+#tl-zoom-bar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; border-top: 1px solid var(--border); flex-shrink: 0; height: 38px; box-sizing: border-box; }
 #tl-zoom-label { font-size: 11px; color: var(--text2); min-width: 70px; text-align: center; }
 #timeline-list { padding-bottom: 80px; }
-#tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+#tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); height: 100px; box-sizing: border-box; overflow: hidden; }
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 #tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
 .tl-saldo-pill { font-size: 11px; background: var(--bg3); border-radius: 99px; padding: 3px 10px; font-family: var(--mono); display: inline-flex; align-items: center; gap: 5px; }
@@ -252,7 +253,6 @@ a { text-decoration: none; color: inherit; }
 .tl-mov-chip { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--bg3); border: 1px solid var(--border); }
 .tl-mov-chip.ingreso { border-color: var(--green); color: var(--green); }
 .tl-mov-chip.gasto   { border-color: var(--red);   color: var(--red);   }
-#tl-scroll-wrap { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; cursor: grab; position: relative; }
 #tl-scroll-wrap:active { cursor: grabbing; }
 #tl-canvas-wrap { position: relative; height: 100%; }
 #tl-canvas { display: block; height: 100%; }
@@ -1469,46 +1469,22 @@ function initTimeline() {
     }
   }, { passive: true });
 
-  // Triple-rAF: wait for full flex layout resolution
-  function doDrawTimeline() {
-    var sw = document.getElementById('tl-scroll-wrap');
-    if (!sw) return;
-    // Use getBoundingClientRect which forces layout
-    var rect = sw.getBoundingClientRect();
-    var visH = rect.height;
-    if (visH < 50) {
-      // Explicit fallback: window - topbar - header - zoombar - bnav
-      var th = document.getElementById('tl-topbar');
-      var hh = document.getElementById('tl-header');
-      var zh = document.getElementById('tl-zoom-bar');
-      var bn = document.querySelector('.bottom-nav');
-      var avisos = document.getElementById('tl-avisos');
-      visH = window.innerHeight
-        - (th ? th.getBoundingClientRect().height : 40)
-        - (hh ? hh.getBoundingClientRect().height : 80)
-        - (zh ? zh.getBoundingClientRect().height : 36)
-        - (bn ? bn.getBoundingClientRect().height : 56)
-        - (avisos && avisos.style.display !== 'none' ? avisos.getBoundingClientRect().height : 0)
-        - 4;
-    }
-    visH = Math.max(visH, 100);
-    TL.rowH = Math.max(40, Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1)));
-
-    var cvs2 = document.getElementById('tl-canvas');
-    cvs2.height = visH; cvs2.style.height = visH + 'px';
-    document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
-
-    drawTimeline();
-
-    TL.cursorDay = todayIdx;
+  // Height is fixed in CSS — read it directly
+  var sw   = document.getElementById('tl-scroll-wrap');
+  var cvs2 = document.getElementById('tl-canvas');
+  // Force layout flush
+  var visH = sw.offsetHeight;
+  if (visH < 50) visH = window.innerHeight - 238;
+  visH = Math.max(visH, 100);
+  TL.rowH = Math.max(40, Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1)));
+  cvs2.height = visH; cvs2.style.height = visH + 'px';
+  document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
+  drawTimeline();
+  TL.cursorDay = todayIdx;
+  requestAnimationFrame(function() {
     sw.scrollLeft = todayIdx * TL.colW + TL.colW/2 - sw.clientWidth/2;
     updateCursorLine();
     updateCursorInfo();
-  }
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      requestAnimationFrame(doDrawTimeline);
-    });
   });
 
   // Today button
