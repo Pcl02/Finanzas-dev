@@ -207,10 +207,27 @@ a { text-decoration: none; color: inherit; }
 .ftab { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
 .ftab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 
+.tl-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.tl-controls label { font-size: 13px; color: var(--text2); }
+.tl-controls select { background: var(--bg2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: var(--radius-xs); font-size: 13px; cursor: pointer; outline: none; }
+.tl-month { font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .08em; padding: 18px 0 8px; }
+.tl-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: default; }
+.tl-item.tappable { cursor: pointer; }
+.tl-item.tappable:active { opacity: .7; }
+.tl-item:last-child { border-bottom: none; }
+.tl-date { font-size: 11px; color: var(--text2); font-family: var(--mono); min-width: 34px; padding-top: 3px; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-name { font-size: 14px; font-weight: 500; }
+.tl-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.tl-right { text-align: right; flex-shrink: 0; }
+.tl-amount { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.tl-saldo { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: var(--mono); }
 /* ─────────────────────────────────────────────
    TIMELINE HORIZONTAL
 ───────────────────────────────────────────── */
-.tl-page { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
+.tl-page { padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
+.tl-page.active { display: flex !important; flex-direction: column; }
 #tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
@@ -1444,14 +1461,28 @@ function initTimeline() {
   document.getElementById('tl-canvas-wrap').style.width  = width + 'px';
   document.getElementById('tl-canvas-wrap').style.height = height + 'px';
 
-  drawTimeline();
+  // Use rAF to ensure DOM has laid out before drawing and scrolling
+  requestAnimationFrame(function() {
+    // Recalculate height now that DOM is rendered
+    var scrollEl2 = document.getElementById('tl-scroll-wrap');
+    if (scrollEl2) {
+      var visH2 = scrollEl2.clientHeight;
+      if (visH2 > 0) {
+        TL.rowH = Math.floor((visH2 - TL.padTop - 4) / Math.max(cuentas.length, 1));
+        canvas.height = visH2;
+        canvas.style.height = visH2 + 'px';
+        document.getElementById('tl-canvas-wrap').style.height = visH2 + 'px';
+      }
+    }
+    drawTimeline();
 
-  // Scroll to today
-  TL.cursorDay = todayIdx;
-  var scrollWrap = document.getElementById('tl-scroll-wrap');
-  scrollWrap.scrollLeft = todayIdx * TL.colW + TL.colW/2 - scrollWrap.clientWidth/2;
-  updateCursorLine();
-  updateCursorInfo();
+    // Scroll to today
+    TL.cursorDay = todayIdx;
+    var scrollWrap = document.getElementById('tl-scroll-wrap');
+    scrollWrap.scrollLeft = todayIdx * TL.colW + TL.colW/2 - scrollWrap.clientWidth/2;
+    updateCursorLine();
+    updateCursorInfo();
+  });
 
   // Bind scroll — no snapping, smooth cursor update
   var newWrap = wrap.cloneNode(false);
