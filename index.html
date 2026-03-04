@@ -226,37 +226,80 @@ a { text-decoration: none; color: inherit; }
 /* ─────────────────────────────────────────────
    TIMELINE HORIZONTAL
 ───────────────────────────────────────────── */
-.tl-page { padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
+/* Page shell */
 .tl-page.active { display: flex !important; flex-direction: column; }
-#tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; height: 44px; box-sizing: border-box; }
-/* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.tl-today-btn:active { opacity: .7; }
-#tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
-#tl-lista { flex: 1; overflow-y: auto; padding: 0 14px; }
-#timeline-list { padding-bottom: 80px; }
-#tl-avisos { background: rgba(255,92,106,.1); border-bottom: 1px solid rgba(255,92,106,.3); }
+
+#tl-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  height: 44px; box-sizing: border-box; flex-shrink: 0; gap: 8px;
+}
+
+/* Visual view: fills remaining height using absolute positioning */
+#tl-visual { position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+#tl-avisos {
+  display: none; padding: 6px 12px; flex-wrap: wrap; gap: 6px;
+  flex-shrink: 0; background: rgba(255,92,106,.1);
+  border-bottom: 1px solid rgba(255,92,106,.3);
+}
+#tl-avisos.visible { display: flex; }
 .tl-aviso-chip { font-size: 11px; color: var(--red); font-weight: 500; }
-.tl-tooltip { position: absolute; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; pointer-events: none; z-index: 10; min-width: 140px; box-shadow: var(--shadow); white-space: nowrap; }
-.tl-tooltip-name { font-weight: 600; margin-bottom: 3px; }
-.tl-tooltip-meta { color: var(--text2); font-size: 11px; }
-.tl-tooltip-amount { font-family: var(--mono); font-weight: 700; margin-top: 4px; }
-#tl-scroll-wrap { height: calc(100vh - 56px - 44px - 100px - 38px - env(safe-area-inset-bottom)); overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; cursor: grab; position: relative; flex-shrink: 0; }
-#tl-zoom-bar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; border-top: 1px solid var(--border); flex-shrink: 0; height: 38px; box-sizing: border-box; }
-#tl-zoom-label { font-size: 11px; color: var(--text2); min-width: 70px; text-align: center; }
-#timeline-list { padding-bottom: 80px; }
-#tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); height: 100px; box-sizing: border-box; overflow: hidden; }
+
+#tl-header {
+  padding: 8px 14px 6px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-#tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
-.tl-saldo-pill { font-size: 11px; background: var(--bg3); border-radius: 99px; padding: 3px 10px; font-family: var(--mono); display: inline-flex; align-items: center; gap: 5px; }
-.tl-saldo-pill span { color: var(--text2); margin-right: 4px; }
-#tl-cursor-movs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px; }
-.tl-mov-chip { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--bg3); border: 1px solid var(--border); }
+#tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.tl-saldo-pill {
+  font-size: 11px; background: var(--bg3); border-radius: 99px;
+  padding: 2px 8px; font-family: var(--mono);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.tl-saldo-pill span { color: var(--text2); }
+#tl-cursor-movs { display: flex; flex-wrap: wrap; gap: 5px; min-height: 18px; }
+.tl-mov-chip { font-size: 11px; padding: 2px 7px; border-radius: 99px; background: var(--bg3); border: 1px solid var(--border); }
 .tl-mov-chip.ingreso { border-color: var(--green); color: var(--green); }
-.tl-mov-chip.gasto   { border-color: var(--red);   color: var(--red);   }
+.tl-mov-chip.gasto   { border-color: var(--red);   color: var(--red); }
+
+/* The scroll area fills all remaining space */
+#tl-scroll-wrap {
+  flex: 1;
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab; position: relative;
+}
 #tl-scroll-wrap:active { cursor: grabbing; }
 #tl-canvas-wrap { position: relative; height: 100%; }
-#tl-canvas { display: block; height: 100%; }
-#tl-cursor-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--blue); opacity: .8; pointer-events: none; transform: translateX(-50%); }
+#tl-canvas { display: block; }
+#tl-cursor-line {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: var(--blue); opacity: .85;
+  pointer-events: none; transform: translateX(-50%);
+  box-shadow: 0 0 8px var(--blue);
+}
+.tl-tooltip {
+  position: absolute; background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px;
+  pointer-events: none; z-index: 10; min-width: 140px;
+  box-shadow: var(--shadow); white-space: nowrap;
+}
+.tl-tooltip-name  { font-weight: 600; margin-bottom: 3px; }
+.tl-tooltip-meta  { color: var(--text2); font-size: 11px; }
+.tl-tooltip-amount{ font-family: var(--mono); font-weight: 700; margin-top: 4px; }
+
+#tl-zoom-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 5px 16px;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+#tl-zoom-label { font-size: 11px; color: var(--text2); min-width: 70px; text-align: center; }
+
+/* Lista view */
+#tl-lista { flex: 1; overflow-y: auto; padding: 0 14px; }
+#tl-lista .tl-controls { padding: 12px 0; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+#timeline-list { padding-bottom: 80px; }
 
 /* ─────────────────────────────────────────────
    FAB
@@ -505,7 +548,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
       </div>
       <!-- Vista visual -->
       <div id="tl-visual">
-        <div id="tl-avisos" style="display:none;padding:6px 12px;flex-wrap:wrap;gap:6px"></div>
+        <div id="tl-avisos"></div>
         <div id="tl-header">
           <div id="tl-cursor-info">
             <div id="tl-cursor-date"></div>
@@ -1446,15 +1489,48 @@ function initTimeline() {
     dias[j].saldos = Object.assign({}, sb);
   }
 
-  // Canvas sizing — calculate width now, height after layout
-  var canvas   = document.getElementById('tl-canvas');
+  // Canvas: set width now, height via ResizeObserver
+  var canvas = document.getElementById('tl-canvas');
   if (!canvas) return;
-  var width = dias.length * TL.colW;
-  canvas.width = width;
-  canvas.style.width = width + 'px';
-  document.getElementById('tl-canvas-wrap').style.width = width + 'px';
 
-  // Bind scroll listener now (before rAF replaces the node)
+  function resizeAndDraw() {
+    var sw2 = document.getElementById('tl-scroll-wrap');
+    if (!sw2) return;
+    var visH = sw2.offsetHeight;
+    if (visH < 60) return; // not laid out yet, observer will fire again
+    var newW = TL.dias.length * TL.colW;
+    TL.rowH = Math.max(40, Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1)));
+    var cvs = document.getElementById('tl-canvas');
+    cvs.width  = newW; cvs.style.width  = newW + 'px';
+    cvs.height = visH; cvs.style.height = visH + 'px';
+    document.getElementById('tl-canvas-wrap').style.width  = newW + 'px';
+    document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
+    drawTimeline();
+    // Center on today
+    var sw3 = document.getElementById('tl-scroll-wrap');
+    sw3.scrollLeft = TL.cursorDay * TL.colW + TL.colW/2 - sw3.clientWidth/2;
+    updateCursorLine();
+    updateCursorInfo();
+  }
+
+  // Use ResizeObserver so we fire as soon as the container has real size
+  if (window.ResizeObserver) {
+    if (TL._resizeObs) TL._resizeObs.disconnect();
+    TL._resizeObs = new ResizeObserver(function(entries) {
+      if (entries[0].contentRect.height > 60) {
+        TL._resizeObs.disconnect();
+        TL.cursorDay = todayIdx;
+        resizeAndDraw();
+      }
+    });
+    TL._resizeObs.observe(document.getElementById('tl-scroll-wrap'));
+  } else {
+    // Fallback for older browsers
+    TL.cursorDay = todayIdx;
+    setTimeout(resizeAndDraw, 100);
+  }
+
+  // Bind scroll listener
   var newWrap = wrap.cloneNode(false);
   while (wrap.firstChild) newWrap.appendChild(wrap.firstChild);
   wrap.parentNode.replaceChild(newWrap, wrap);
@@ -1468,24 +1544,6 @@ function initTimeline() {
       updateCursorInfo();
     }
   }, { passive: true });
-
-  // Height is fixed in CSS — read it directly
-  var sw   = document.getElementById('tl-scroll-wrap');
-  var cvs2 = document.getElementById('tl-canvas');
-  // Force layout flush
-  var visH = sw.offsetHeight;
-  if (visH < 50) visH = window.innerHeight - 238;
-  visH = Math.max(visH, 100);
-  TL.rowH = Math.max(40, Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1)));
-  cvs2.height = visH; cvs2.style.height = visH + 'px';
-  document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
-  drawTimeline();
-  TL.cursorDay = todayIdx;
-  requestAnimationFrame(function() {
-    sw.scrollLeft = todayIdx * TL.colW + TL.colW/2 - sw.clientWidth/2;
-    updateCursorLine();
-    updateCursorInfo();
-  });
 
   // Today button
   var btnToday = document.getElementById('btn-tl-today');
@@ -1819,8 +1877,8 @@ function updateNegativoAvisos() {
   var el = document.getElementById('tl-avisos');
   if (!el) return;
   var avisos = TL.negativoAvisos || [];
-  if (!avisos.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
-  el.style.display = '';
+  if (!avisos.length) { el.innerHTML = ''; el.classList.remove('visible'); return; }
+  el.classList.add('visible');
   el.innerHTML = avisos.map(function(a) {
     return '<span class="tl-aviso-chip">⚠️ ' + esc(a.cuenta) + ' en negativo el ' + fmtDateEs(a.fecha) + ' (' + fmt(a.saldo) + ')</span>';
   }).join('');
