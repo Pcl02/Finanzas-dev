@@ -231,7 +231,7 @@ a { text-decoration: none; color: inherit; }
 #tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
-#tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+#tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
 #tl-lista { flex: 1; overflow-y: auto; padding: 0 14px; }
 #timeline-list { padding-bottom: 80px; }
 #tl-avisos { background: rgba(255,92,106,.1); border-bottom: 1px solid rgba(255,92,106,.3); }
@@ -246,7 +246,7 @@ a { text-decoration: none; color: inherit; }
 #tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 #tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
-.tl-saldo-pill { font-size: 11px; background: var(--bg3); border-radius: 99px; padding: 3px 10px; font-family: var(--mono); }
+.tl-saldo-pill { font-size: 11px; background: var(--bg3); border-radius: 99px; padding: 3px 10px; font-family: var(--mono); display: inline-flex; align-items: center; gap: 5px; }
 .tl-saldo-pill span { color: var(--text2); margin-right: 4px; }
 #tl-cursor-movs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px; }
 .tl-mov-chip { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--bg3); border: 1px solid var(--border); }
@@ -1469,36 +1469,45 @@ function initTimeline() {
     }
   }, { passive: true });
 
-  // Use double-rAF to ensure flex layout has fully resolved height
+  // Triple-rAF: wait for full flex layout resolution
+  function doDrawTimeline() {
+    var sw = document.getElementById('tl-scroll-wrap');
+    if (!sw) return;
+    // Use getBoundingClientRect which forces layout
+    var rect = sw.getBoundingClientRect();
+    var visH = rect.height;
+    if (visH < 50) {
+      // Explicit fallback: window - topbar - header - zoombar - bnav
+      var th = document.getElementById('tl-topbar');
+      var hh = document.getElementById('tl-header');
+      var zh = document.getElementById('tl-zoom-bar');
+      var bn = document.querySelector('.bottom-nav');
+      var avisos = document.getElementById('tl-avisos');
+      visH = window.innerHeight
+        - (th ? th.getBoundingClientRect().height : 40)
+        - (hh ? hh.getBoundingClientRect().height : 80)
+        - (zh ? zh.getBoundingClientRect().height : 36)
+        - (bn ? bn.getBoundingClientRect().height : 56)
+        - (avisos && avisos.style.display !== 'none' ? avisos.getBoundingClientRect().height : 0)
+        - 4;
+    }
+    visH = Math.max(visH, 100);
+    TL.rowH = Math.max(40, Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1)));
+
+    var cvs2 = document.getElementById('tl-canvas');
+    cvs2.height = visH; cvs2.style.height = visH + 'px';
+    document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
+
+    drawTimeline();
+
+    TL.cursorDay = todayIdx;
+    sw.scrollLeft = todayIdx * TL.colW + TL.colW/2 - sw.clientWidth/2;
+    updateCursorLine();
+    updateCursorInfo();
+  }
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      var scrollEl = document.getElementById('tl-scroll-wrap');
-      var visH = scrollEl ? scrollEl.clientHeight : 0;
-      if (!visH) {
-        // Fallback: calculate from window height minus fixed elements
-        var topbar  = document.getElementById('tl-topbar');
-        var header  = document.getElementById('tl-header');
-        var zoomBar = document.getElementById('tl-zoom-bar');
-        var bnav    = document.querySelector('.bottom-nav');
-        var used = (topbar ? topbar.offsetHeight : 40) +
-                   (header ? header.offsetHeight : 80) +
-                   (zoomBar ? zoomBar.offsetHeight : 36) +
-                   (bnav ? bnav.offsetHeight : 56) + 8;
-        visH = window.innerHeight - used;
-      }
-      visH = Math.max(visH, 120);
-      TL.rowH = Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1));
-      var cvs2 = document.getElementById('tl-canvas');
-      cvs2.height = visH; cvs2.style.height = visH + 'px';
-      document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
-
-      drawTimeline();
-
-      TL.cursorDay = todayIdx;
-      var sw = document.getElementById('tl-scroll-wrap');
-      sw.scrollLeft = todayIdx * TL.colW + TL.colW/2 - sw.clientWidth/2;
-      updateCursorLine();
-      updateCursorInfo();
+      requestAnimationFrame(doDrawTimeline);
     });
   });
 
