@@ -232,7 +232,7 @@ a { text-decoration: none; color: inherit; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
 #tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-#tl-lista { flex: 1; overflow-y: auto; }
+#tl-lista { flex: 1; overflow-y: auto; padding: 0 14px; }
 #timeline-list { padding-bottom: 80px; }
 #tl-avisos { background: rgba(255,92,106,.1); border-bottom: 1px solid rgba(255,92,106,.3); }
 .tl-aviso-chip { font-size: 11px; color: var(--red); font-weight: 500; }
@@ -1446,45 +1446,15 @@ function initTimeline() {
     dias[j].saldos = Object.assign({}, sb);
   }
 
-  // Canvas sizing — fill full available height
+  // Canvas sizing — calculate width now, height after layout
   var canvas   = document.getElementById('tl-canvas');
-  var scrollEl = document.getElementById('tl-scroll-wrap');
   if (!canvas) return;
-  var visH  = scrollEl.clientHeight || (window.innerHeight - 200);
-  var rows  = Math.max(cuentas.length, 1);
-  TL.rowH   = Math.floor((visH - TL.padTop - 4) / rows);
-  var width  = dias.length * TL.colW;
-  var height = visH;
+  var width = dias.length * TL.colW;
+  canvas.width = width;
+  canvas.style.width = width + 'px';
+  document.getElementById('tl-canvas-wrap').style.width = width + 'px';
 
-  canvas.width  = width;  canvas.height  = height;
-  canvas.style.width  = width + 'px'; canvas.style.height = height + 'px';
-  document.getElementById('tl-canvas-wrap').style.width  = width + 'px';
-  document.getElementById('tl-canvas-wrap').style.height = height + 'px';
-
-  // Use rAF to ensure DOM has laid out before drawing and scrolling
-  requestAnimationFrame(function() {
-    // Recalculate height now that DOM is rendered
-    var scrollEl2 = document.getElementById('tl-scroll-wrap');
-    if (scrollEl2) {
-      var visH2 = scrollEl2.clientHeight;
-      if (visH2 > 0) {
-        TL.rowH = Math.floor((visH2 - TL.padTop - 4) / Math.max(cuentas.length, 1));
-        canvas.height = visH2;
-        canvas.style.height = visH2 + 'px';
-        document.getElementById('tl-canvas-wrap').style.height = visH2 + 'px';
-      }
-    }
-    drawTimeline();
-
-    // Scroll to today
-    TL.cursorDay = todayIdx;
-    var scrollWrap = document.getElementById('tl-scroll-wrap');
-    scrollWrap.scrollLeft = todayIdx * TL.colW + TL.colW/2 - scrollWrap.clientWidth/2;
-    updateCursorLine();
-    updateCursorInfo();
-  });
-
-  // Bind scroll — no snapping, smooth cursor update
+  // Bind scroll listener now (before rAF replaces the node)
   var newWrap = wrap.cloneNode(false);
   while (wrap.firstChild) newWrap.appendChild(wrap.firstChild);
   wrap.parentNode.replaceChild(newWrap, wrap);
@@ -1498,6 +1468,39 @@ function initTimeline() {
       updateCursorInfo();
     }
   }, { passive: true });
+
+  // Use double-rAF to ensure flex layout has fully resolved height
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var scrollEl = document.getElementById('tl-scroll-wrap');
+      var visH = scrollEl ? scrollEl.clientHeight : 0;
+      if (!visH) {
+        // Fallback: calculate from window height minus fixed elements
+        var topbar  = document.getElementById('tl-topbar');
+        var header  = document.getElementById('tl-header');
+        var zoomBar = document.getElementById('tl-zoom-bar');
+        var bnav    = document.querySelector('.bottom-nav');
+        var used = (topbar ? topbar.offsetHeight : 40) +
+                   (header ? header.offsetHeight : 80) +
+                   (zoomBar ? zoomBar.offsetHeight : 36) +
+                   (bnav ? bnav.offsetHeight : 56) + 8;
+        visH = window.innerHeight - used;
+      }
+      visH = Math.max(visH, 120);
+      TL.rowH = Math.floor((visH - TL.padTop - 4) / Math.max(cuentas.length, 1));
+      var cvs2 = document.getElementById('tl-canvas');
+      cvs2.height = visH; cvs2.style.height = visH + 'px';
+      document.getElementById('tl-canvas-wrap').style.height = visH + 'px';
+
+      drawTimeline();
+
+      TL.cursorDay = todayIdx;
+      var sw = document.getElementById('tl-scroll-wrap');
+      sw.scrollLeft = todayIdx * TL.colW + TL.colW/2 - sw.clientWidth/2;
+      updateCursorLine();
+      updateCursorInfo();
+    });
+  });
 
   // Today button
   var btnToday = document.getElementById('btn-tl-today');
