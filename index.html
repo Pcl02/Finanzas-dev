@@ -236,7 +236,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* Visual view: fills remaining height using absolute positioning */
-#tl-visual { position: relative; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+#tl-visual { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 
 #tl-avisos {
   display: none; padding: 6px 12px; flex-wrap: wrap; gap: 6px;
@@ -265,7 +265,7 @@ a { text-decoration: none; color: inherit; }
 
 /* The scroll area fills all remaining space */
 #tl-scroll-wrap {
-  flex: 1;
+  flex: 1; min-height: 0;
   overflow-x: auto; overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   cursor: grab; position: relative;
@@ -1448,7 +1448,7 @@ function initTimeline() {
   // Real transactions
   D.transacciones.forEach(function(t) {
     var day = dias.find(function(d) { return d.fecha === t.fecha; });
-    if (day) day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real' });
+    if (day) day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, cuentaDestino: t.cuenta_destino || null, origen: 'real' });
   });
 
   // Programadas (future only)
@@ -1457,7 +1457,7 @@ function initTimeline() {
     expandirProgramada(prog, hoy, limite).forEach(function(fecha) {
       var f = fmtDate(fecha);
       var day = dias.find(function(d) { return d.fecha === f; });
-      if (day) day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog' });
+      if (day) day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, cuentaDestino: prog.cuenta_destino || null, origen: 'prog', id: prog.id });
     });
   });
 
@@ -1472,8 +1472,12 @@ function initTimeline() {
   for (var i = todayIdx; i < dias.length; i++) {
     dias[i].eventos.forEach(function(ev) {
       if (!ev.cuentaId) return;
-      if      (ev.tipo === 'Ingreso') sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
-      else if (ev.tipo === 'Gasto')   sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
+      if      (ev.tipo === 'Ingreso')       sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
+      else if (ev.tipo === 'Gasto')         sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
+      else if (ev.tipo === 'Transferencia') {
+        sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
+        if (ev.cuentaDestino) sf[ev.cuentaDestino] = (sf[ev.cuentaDestino]||0) + ev.importe;
+      }
     });
     dias[i].saldos = Object.assign({}, sf);
   }
@@ -1483,8 +1487,12 @@ function initTimeline() {
   for (var j = todayIdx - 1; j >= 0; j--) {
     dias[j+1].eventos.forEach(function(ev) {
       if (!ev.cuentaId || ev.origen !== 'real') return;
-      if      (ev.tipo === 'Ingreso') sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
-      else if (ev.tipo === 'Gasto')   sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
+      if      (ev.tipo === 'Ingreso')       sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
+      else if (ev.tipo === 'Gasto')         sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
+      else if (ev.tipo === 'Transferencia') {
+        sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
+        if (ev.cuentaDestino) sb[ev.cuentaDestino] = (sb[ev.cuentaDestino]||0) - ev.importe;
+      }
     });
     dias[j].saldos = Object.assign({}, sb);
   }
@@ -1517,7 +1525,7 @@ function initTimeline() {
   if (window.ResizeObserver) {
     if (TL._resizeObs) TL._resizeObs.disconnect();
     TL._resizeObs = new ResizeObserver(function(entries) {
-      if (entries[0].contentRect.height > 60) {
+      if (entries[0].contentRect.height > 100) {
         TL._resizeObs.disconnect();
         TL.cursorDay = todayIdx;
         resizeAndDraw();
