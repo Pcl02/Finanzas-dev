@@ -122,9 +122,7 @@ a { text-decoration: none; color: inherit; }
   left: 0; right: 0;
   overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  height: calc(100vh - var(--topbar-h) - var(--bnav-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
-.main:has(#page-timeline.active) { overflow: hidden; }
 .page { display: none; padding: 16px 14px 24px; }
 .page.active { display: block; }
 
@@ -212,28 +210,22 @@ a { text-decoration: none; color: inherit; }
 /* ─────────────────────────────────────────────
    TIMELINE HORIZONTAL
 ───────────────────────────────────────────── */
-.tl-page { display: none; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
-.tl-page.active { display: flex; }
+.tl-page { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; height: calc(100vh - 56px - env(safe-area-inset-bottom)); }
 #tl-topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 10px; }
 /* .tl-today-btn { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tl-today-btn:active { opacity: .7; }
 #tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-#tl-lista { flex: 1; overflow-y: auto; padding: 8px 14px 24px; }
-.tl-controls { display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; flex-shrink: 0; }
-.tl-controls label { font-size: 13px; color: var(--text2); }
-.tl-controls select { background: var(--bg2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
-.tl-month { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 6px; padding-left: 2px; }
-.tl-item { display: flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: default; }
-.tl-item.tappable { cursor: pointer; }
-.tl-item.tappable:active { opacity: .7; }
-.tl-date { font-size: 11px; font-weight: 700; color: var(--text2); min-width: 28px; text-align: center; line-height: 1.2; }
-.tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.tl-body { flex: 1; min-width: 0; }
-.tl-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.tl-right { text-align: right; flex-shrink: 0; }
-.tl-amount { font-size: 13px; font-weight: 700; font-family: var(--mono); }
-.tl-saldo { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+#tl-lista { flex: 1; overflow-y: auto; }
+#timeline-list { padding-bottom: 80px; }
+#tl-avisos { background: rgba(255,92,106,.1); border-bottom: 1px solid rgba(255,92,106,.3); }
+.tl-aviso-chip { font-size: 11px; color: var(--red); font-weight: 500; }
+.tl-tooltip { position: absolute; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; pointer-events: none; z-index: 10; min-width: 140px; box-shadow: var(--shadow); white-space: nowrap; }
+.tl-tooltip-name { font-weight: 600; margin-bottom: 3px; }
+.tl-tooltip-meta { color: var(--text2); font-size: 11px; }
+.tl-tooltip-amount { font-family: var(--mono); font-weight: 700; margin-top: 4px; }
+#tl-zoom-bar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+#tl-zoom-label { font-size: 11px; color: var(--text2); min-width: 70px; text-align: center; }
+#timeline-list { padding-bottom: 80px; }
 #tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
 #tl-cursor-date { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 #tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
@@ -496,6 +488,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
       </div>
       <!-- Vista visual -->
       <div id="tl-visual">
+        <div id="tl-avisos" style="display:none;padding:6px 12px;flex-wrap:wrap;gap:6px"></div>
         <div id="tl-header">
           <div id="tl-cursor-info">
             <div id="tl-cursor-date"></div>
@@ -507,7 +500,13 @@ button:disabled { opacity: .5; cursor: not-allowed; }
           <div id="tl-canvas-wrap">
             <canvas id="tl-canvas"></canvas>
             <div id="tl-cursor-line"></div>
+            <div id="tl-tooltip" class="tl-tooltip hidden"></div>
           </div>
+        </div>
+        <div id="tl-zoom-bar">
+          <button class="btn-sm" id="btn-tl-zoom-out">−</button>
+          <span id="tl-zoom-label">Día a día</span>
+          <button class="btn-sm" id="btn-tl-zoom-in">+</button>
         </div>
       </div>
       <!-- Vista lista -->
@@ -770,13 +769,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 
 <!-- Toast -->
 <div class="toast hidden" id="toast"></div>
-
-<!-- Timeline click popup -->
-<div id="tl-click-popup" class="hidden" style="position:fixed;z-index:300;background:#1e2a3d;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:180px;">
-  <div id="tl-popup-date" style="font-size:11px;color:#6b7a94;padding:6px 10px 4px;font-weight:600;"></div>
-  <button id="tl-popup-tx" style="display:block;width:100%;text-align:left;background:none;border:none;color:#e8edf5;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">📒 Transacción</button>
-  <button id="tl-popup-prog" style="display:block;width:100%;text-align:left;background:none;border:none;color:#e8edf5;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">📅 Programada</button>
-</div>
 
 <script>
 'use strict';
@@ -1208,49 +1200,7 @@ function renderObjetivos() {
 
 // ── Timeline ─────────────────────────────────────────
 function renderTimelinePage() {
-  if (!document.getElementById('tl-lista-style')) {
-    var s = document.createElement('style');
-    s.id = 'tl-lista-style';
-    s.textContent =
-      '.tl-page { display: none; flex-direction: column; padding: 0 !important; overflow: hidden; }\n' +
-      '.tl-page.active { display: flex !important; flex-direction: column; height: 100%; max-height: 100%; }\n' +
-      '#tl-topbar { display: flex !important; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,.07); flex-shrink: 0; gap: 10px; }\n' +
-      '#tl-visual { display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }\n' +
-      '#tl-visual.hidden { display: none !important; }\n' +
-      '#tl-header { padding: 10px 16px 8px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,.07); }\n' +
-      '#tl-scroll-wrap { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; cursor: grab; position: relative; min-height: 0; }\n' +
-      '#tl-scroll-wrap:active { cursor: grabbing; }\n' +
-      '#tl-canvas-wrap { position: relative; height: 100%; }\n' +
-      '#tl-canvas { display: block; height: 100%; }\n' +
-      '#tl-cursor-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #4d8fff; opacity: .8; pointer-events: none; }\n' +
-      '#tl-lista { display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 8px 14px 24px; min-height: 0; }\n' +
-      '#tl-lista.hidden { display: none !important; }\n' +
-      '#tl-cursor-date { font-size: 13px; font-weight: 700; color: #e8edf5; margin-bottom: 4px; }\n' +
-      '#tl-cursor-saldos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }\n' +
-      '.tl-saldo-pill { font-size: 11px; background: #161e2e; border-radius: 99px; padding: 3px 10px; font-family: "DM Mono", monospace; }\n' +
-      '.tl-saldo-pill span { color: #6b7a94; margin-right: 4px; }\n' +
-      '#tl-cursor-movs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px; }\n' +
-      '.tl-mov-chip { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: #161e2e; border: 1px solid rgba(255,255,255,.07); }\n' +
-      '.tl-mov-chip.ingreso { border-color: #00d4a0; color: #00d4a0; }\n' +
-      '.tl-mov-chip.gasto { border-color: #ff5c6a; color: #ff5c6a; }\n' +
-      '.tl-controls label { font-size: 13px; color: #6b7a94; }\n' +
-      '.tl-controls select { background: #0f1520; border: 1px solid rgba(255,255,255,.07); color: #e8edf5; border-radius: 8px; padding: 4px 10px; font-size: 13px; }\n' +
-      '.tl-controls { display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; }\n' +
-      '.tl-month { font-size: 12px; font-weight: 700; color: #6b7a94; text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 6px; padding-left: 2px; }\n' +
-      '.tl-item { display: flex !important; align-items: center !important; gap: 10px; background: #0f1520; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: default; }\n' +
-      '.tl-item.tappable { cursor: pointer; }\n' +
-      '.tl-item.tappable:active { opacity: .7; }\n' +
-      '.tl-date { font-size: 11px; font-weight: 700; color: #6b7a94; min-width: 32px; text-align: center; flex-shrink: 0; }\n' +
-      '.tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }\n' +
-      '.tl-body { flex: 1 !important; min-width: 0; }\n' +
-      '.tl-name { font-size: 13px; font-weight: 600; color: #e8edf5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n' +
-      '.tl-meta { font-size: 11px; color: #6b7a94; margin-top: 2px; }\n' +
-      '.tl-right { text-align: right; flex-shrink: 0; }\n' +
-      '.tl-amount { font-size: 13px; font-weight: 700; font-family: "DM Mono", monospace; }\n' +
-      '.tl-saldo { font-size: 11px; color: #6b7a94; font-family: "DM Mono", monospace; margin-top: 2px; }';
-    document.head.appendChild(s);
-  }
-  requestAnimationFrame(function() { requestAnimationFrame(function() { initTimeline(); }); });
+  initTimeline();
 }
 
 async function generarTimeline(meses) {
@@ -1262,7 +1212,7 @@ async function generarTimeline(meses) {
   D.programadas.forEach(function(prog) {
     expandirProgramada(prog, hoy, limite).forEach(function(fecha) {
       var cuenta = D.cuentas.find(function(c) { return c.id === prog.cuenta_origen; });
-      eventos.push({ fecha: fmtDate(fecha), nombre: prog.nombre, tipo: prog.tipo, cuentaOrigen: cuenta ? cuenta.nombre : '', importe: parseFloat(prog.importe), origen: 'Programada', progId: prog.id });
+      eventos.push({ fecha: fmtDate(fecha), nombre: prog.nombre, tipo: prog.tipo, cuentaOrigen: cuenta ? cuenta.nombre : '', cuentaId: prog.cuenta_origen, importe: parseFloat(prog.importe), origen: 'Programada', progId: prog.id });
     });
   });
 
@@ -1283,11 +1233,20 @@ async function generarTimeline(meses) {
   });
 
   eventos.sort(function(a, b) { return a.fecha.localeCompare(b.fecha); });
+  // Track global saldo + per-account saldos
   var saldo = saldoTotal;
+  var saldosCuenta = {};
+  D.cuentas.forEach(function(cu) { saldosCuenta[cu.id] = parseFloat(cu.saldo_actual) || 0; });
   eventos.forEach(function(ev) {
-    if (ev.tipo === 'Ingreso') saldo += ev.importe;
-    else if (ev.tipo === 'Gasto') saldo -= ev.importe;
+    if (ev.tipo === 'Ingreso') {
+      saldo += ev.importe;
+      if (ev.cuentaId) saldosCuenta[ev.cuentaId] = (saldosCuenta[ev.cuentaId] || 0) + ev.importe;
+    } else if (ev.tipo === 'Gasto') {
+      saldo -= ev.importe;
+      if (ev.cuentaId) saldosCuenta[ev.cuentaId] = (saldosCuenta[ev.cuentaId] || 0) - ev.importe;
+    }
     ev.saldoProyectado = saldo;
+    ev.saldosCuenta    = Object.assign({}, saldosCuenta);
   });
   return eventos;
 }
@@ -1313,8 +1272,15 @@ function renderTimeline() {
     html += '<div class="tl-dot" style="background:' + color + '"></div>';
     html += '<div class="tl-body"><div class="tl-name">' + esc(ev.nombre) + '</div>';
     html += '<div class="tl-meta">' + ev.origen + (ev.cuentaOrigen ? ' · ' + ev.cuentaOrigen : '') + '</div></div>';
+    var saldoCuentaStr = '';
+    if (ev.cuentaId && ev.saldosCuenta && ev.saldosCuenta[ev.cuentaId] !== undefined) {
+      var sc = ev.saldosCuenta[ev.cuentaId];
+      var scColor = sc < 0 ? 'var(--red)' : 'var(--text2)';
+      saldoCuentaStr = '<div class="tl-saldo" style="color:' + scColor + '">' + esc(ev.cuentaOrigen) + ' → ' + fmt(sc) + '</div>';
+    }
     html += '<div class="tl-right"><div class="tl-amount" style="color:' + color + '">' + signo + fmt(ev.importe) + '</div>';
-    html += '<div class="tl-saldo">→ ' + fmt(ev.saldoProyectado) + '</div></div></div>';
+    html += '<div class="tl-saldo" style="color:' + (ev.saldoProyectado < 0 ? 'var(--red)' : 'var(--text2)') + '">Total → ' + fmt(ev.saldoProyectado) + '</div>';
+    html += saldoCuentaStr + '</div></div>';
   });
   l.innerHTML = html;
 }
@@ -1345,8 +1311,14 @@ function renderTimelineLista() {
       html += '<div class="tl-dot" style="background:' + color + '"></div>';
       html += '<div class="tl-body"><div class="tl-name">' + esc(ev.nombre) + '</div>';
       html += '<div class="tl-meta">' + ev.origen + (ev.cuentaOrigen ? ' · ' + ev.cuentaOrigen : '') + '</div></div>';
+      var saldoCuentaStr2 = '';
+      if (ev.cuentaId && ev.saldosCuenta && ev.saldosCuenta[ev.cuentaId] !== undefined) {
+        var sc2 = ev.saldosCuenta[ev.cuentaId];
+        saldoCuentaStr2 = '<div class="tl-saldo" style="color:' + (sc2 < 0 ? 'var(--red)' : 'var(--text2)') + '">' + esc(ev.cuentaOrigen) + ' → ' + fmt(sc2) + '</div>';
+      }
       html += '<div class="tl-right"><div class="tl-amount" style="color:' + color + '">' + signo + fmt(ev.importe) + '</div>';
-      html += '<div class="tl-saldo">→ ' + fmt(ev.saldoProyectado) + '</div></div></div>';
+      html += '<div class="tl-saldo" style="color:' + (ev.saldoProyectado < 0 ? 'var(--red)' : 'var(--text2)') + '">Total → ' + fmt(ev.saldoProyectado) + '</div>';
+      html += saldoCuentaStr2 + '</div></div>';
     });
     l.innerHTML = html;
   }).catch(function() { l.innerHTML = emptyState('Error al calcular'); });
@@ -1354,12 +1326,16 @@ function renderTimelineLista() {
 
 // ── Timeline state ──────────────────────────────────────
 var TL = {
-  dias: [],        // array of {fecha, eventos:[], saldos:{cuentaId: saldo}}
-  colW: 44,        // px per day column
-  rowH: 52,        // px per account row
-  padTop: 32,      // header row height
+  dias: [],
+  colW: 44,
+  rowH: 52,
+  padTop: 32,
   cursorDay: null,
   listaLoaded: false,
+  zoomLevel: 2,    // 0=año, 1=trimestre, 2=mes(default), 3=semana, 4=día
+  zoomColWidths: [8, 16, 28, 44, 70],
+  zoomLabels: ['Vista anual', 'Trimestral', 'Mensual', 'Semanal', 'Día a día'],
+  negativoAvisos: [],
   dragStartX: 0,
   dragScrollLeft: 0,
 };
@@ -1412,14 +1388,7 @@ function initTimeline() {
   // Real transactions
   D.transacciones.forEach(function(t) {
     var day = dias.find(function(d) { return d.fecha === t.fecha; });
-    if (!day) return;
-    if (t.tipo === 'Transferencia') {
-      // Dos eventos: salida de origen, entrada a destino
-      if (t.cuenta_origen) day.eventos.push({ nombre: t.descripcion || 'Transferencia', tipo: 'TransfSalida', importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real' });
-      if (t.cuenta_destino) day.eventos.push({ nombre: t.descripcion || 'Transferencia', tipo: 'TransfEntrada', importe: parseFloat(t.importe), cuentaId: t.cuenta_destino, origen: 'real' });
-    } else {
-      day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real' });
-    }
+    if (day) day.eventos.push({ nombre: t.descripcion || t.tipo, tipo: t.tipo, importe: parseFloat(t.importe), cuentaId: t.cuenta_origen, origen: 'real' });
   });
 
   // Programadas (future only)
@@ -1428,13 +1397,7 @@ function initTimeline() {
     expandirProgramada(prog, hoy, limite).forEach(function(fecha) {
       var f = fmtDate(fecha);
       var day = dias.find(function(d) { return d.fecha === f; });
-      if (!day) return;
-      if (prog.tipo === 'Transferencia') {
-        if (prog.cuenta_origen) day.eventos.push({ nombre: prog.nombre, tipo: 'TransfSalida', importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog' });
-        if (prog.cuenta_destino) day.eventos.push({ nombre: prog.nombre, tipo: 'TransfEntrada', importe: parseFloat(prog.importe), cuentaId: prog.cuenta_destino, origen: 'prog' });
-      } else {
-        day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog' });
-      }
+      if (day) day.eventos.push({ nombre: prog.nombre, tipo: prog.tipo, importe: parseFloat(prog.importe), cuentaId: prog.cuenta_origen, origen: 'prog' });
     });
   });
 
@@ -1449,10 +1412,8 @@ function initTimeline() {
   for (var i = todayIdx; i < dias.length; i++) {
     dias[i].eventos.forEach(function(ev) {
       if (!ev.cuentaId) return;
-      if      (ev.tipo === 'Ingreso')      sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
-      else if (ev.tipo === 'Gasto')        sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
-      else if (ev.tipo === 'TransfSalida') sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
-      else if (ev.tipo === 'TransfEntrada')sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
+      if      (ev.tipo === 'Ingreso') sf[ev.cuentaId] = (sf[ev.cuentaId]||0) + ev.importe;
+      else if (ev.tipo === 'Gasto')   sf[ev.cuentaId] = (sf[ev.cuentaId]||0) - ev.importe;
     });
     dias[i].saldos = Object.assign({}, sf);
   }
@@ -1462,10 +1423,8 @@ function initTimeline() {
   for (var j = todayIdx - 1; j >= 0; j--) {
     dias[j+1].eventos.forEach(function(ev) {
       if (!ev.cuentaId || ev.origen !== 'real') return;
-      if      (ev.tipo === 'Ingreso')      sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
-      else if (ev.tipo === 'Gasto')        sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
-      else if (ev.tipo === 'TransfSalida') sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
-      else if (ev.tipo === 'TransfEntrada')sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
+      if      (ev.tipo === 'Ingreso') sb[ev.cuentaId] = (sb[ev.cuentaId]||0) - ev.importe;
+      else if (ev.tipo === 'Gasto')   sb[ev.cuentaId] = (sb[ev.cuentaId]||0) + ev.importe;
     });
     dias[j].saldos = Object.assign({}, sb);
   }
@@ -1494,53 +1453,22 @@ function initTimeline() {
   updateCursorLine();
   updateCursorInfo();
 
-  // Bind scroll — solo la primera vez (evita listeners duplicados)
-  if (!TL._scrollBound) {
-    TL._scrollBound = true;
-    wrap.addEventListener('scroll', function() {
-      // Cursor line siempre centrada (no se mueve)
-      updateCursorLine();
-      // Actualizar info según día bajo el cursor central
-      var center = wrap.scrollLeft + wrap.clientWidth / 2;
-      var dayIdx = Math.min(Math.max(Math.floor(center / TL.colW), 0), TL.dias.length - 1);
+  // Bind scroll — no snapping, smooth cursor update
+  var newWrap = wrap.cloneNode(false);
+  while (wrap.firstChild) newWrap.appendChild(wrap.firstChild);
+  wrap.parentNode.replaceChild(newWrap, wrap);
+
+  newWrap.addEventListener('scroll', function() {
+    var center = newWrap.scrollLeft + newWrap.clientWidth / 2;
+    var dayIdx = Math.min(Math.max(Math.floor(center / TL.colW), 0), TL.dias.length - 1);
+    if (dayIdx !== TL.cursorDay) {
       TL.cursorDay = dayIdx;
+      updateCursorLine();
       updateCursorInfo();
-    }, { passive: true });
+    }
+  }, { passive: true });
 
-    // Rueda del ratón → scroll horizontal
-    wrap.addEventListener('wheel', function(e) {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        wrap.scrollLeft += e.deltaY * 2;
-      }
-    }, { passive: false });
-
-    // Drag con ratón (escritorio)
-    wrap.addEventListener('mousedown', function(e) {
-      TL.dragging = true;
-      TL._didDrag = false;
-      TL._dragMoved = 0;
-      TL.dragStartX = e.pageX;
-      TL.dragScrollLeft = wrap.scrollLeft;
-      wrap.style.cursor = 'grabbing';
-      wrap.style.userSelect = 'none';
-    });
-    document.addEventListener('mousemove', function(e) {
-      if (!TL.dragging) return;
-      var dx = e.pageX - TL.dragStartX;
-      TL._dragMoved += Math.abs(e.movementX || 0);
-      if (TL._dragMoved > 4) TL._didDrag = true;
-      wrap.scrollLeft = TL.dragScrollLeft - dx;
-    });
-    document.addEventListener('mouseup', function() {
-      if (!TL.dragging) return;
-      TL.dragging = false;
-      wrap.style.cursor = 'grab';
-      wrap.style.userSelect = '';
-    });
-  }
-
-  // Today button (asignación directa, sin duplicar)
+  // Today button
   var btnToday = document.getElementById('btn-tl-today');
   if (btnToday) {
     btnToday.onclick = function() {
@@ -1551,7 +1479,7 @@ function initTimeline() {
     };
   }
 
-  // View toggle (asignación directa)
+  // View toggle
   var viewTabs = document.getElementById('tl-view-tabs');
   if (viewTabs) {
     viewTabs.querySelectorAll('.ftab').forEach(function(tab) {
@@ -1579,65 +1507,124 @@ function initTimeline() {
     };
   }
 
-  // Canvas click → popup nueva tx/prog
-  var canvas = document.getElementById('tl-canvas');
-  var popup  = document.getElementById('tl-click-popup');
-  if (canvas && popup) {
-    canvas.addEventListener('click', function(e) {
-      // Si hubo drag no abrir popup
-      if (TL._didDrag) return;
-      var rect    = canvas.getBoundingClientRect();
-      var clickX  = e.clientX - rect.left;
-      var clickY  = e.clientY - rect.top;
-      // Día clicado
-      var dayIdx  = Math.min(Math.max(Math.floor(clickX / TL.colW), 0), TL.dias.length - 1);
-      var fecha   = TL.dias[dayIdx].fecha;
-      // Fila (cuenta) clicada
-      var rowIdx  = Math.floor((clickY - TL.padTop) / TL.rowH);
-      var cuenta  = (D.cuentas[rowIdx] && rowIdx >= 0) ? D.cuentas[rowIdx] : null;
-      // Guardar en TL para uso posterior
-      TL.clickFecha  = fecha;
-      TL.clickCuenta = cuenta ? cuenta.id : null;
-      // Mostrar popup cerca del clic
-      var d = new Date(fecha + 'T12:00:00');
-      document.getElementById('tl-popup-date').textContent = d.toLocaleDateString('es', { weekday:'short', day:'numeric', month:'long' }) + (cuenta ? ' · ' + cuenta.nombre : '');
-      var px = Math.min(e.clientX, window.innerWidth - 200);
-      var py = Math.min(e.clientY + 8, window.innerHeight - 120);
-      popup.style.left = px + 'px';
-      popup.style.top  = py + 'px';
-      popup.classList.remove('hidden');
+  // ── Zoom buttons ──
+  function applyZoom(delta) {
+    TL.zoomLevel = Math.max(0, Math.min(TL.zoomColWidths.length - 1, TL.zoomLevel + delta));
+    TL.colW = TL.zoomColWidths[TL.zoomLevel];
+    var zLabel = document.getElementById('tl-zoom-label');
+    if (zLabel) zLabel.textContent = TL.zoomLabels[TL.zoomLevel];
+    // Rebuild canvas with new colW
+    var cvs = document.getElementById('tl-canvas');
+    var sw  = document.getElementById('tl-scroll-wrap');
+    if (!cvs || !sw) return;
+    var newW = TL.dias.length * TL.colW;
+    cvs.width = newW; cvs.style.width = newW + 'px';
+    document.getElementById('tl-canvas-wrap').style.width = newW + 'px';
+    drawTimeline();
+    // Keep cursor centered
+    var cX = TL.cursorDay * TL.colW + TL.colW/2;
+    sw.scrollLeft = cX - sw.clientWidth/2;
+    updateCursorLine();
+  }
+  var btnZoomIn  = document.getElementById('btn-tl-zoom-in');
+  var btnZoomOut = document.getElementById('btn-tl-zoom-out');
+  if (btnZoomIn)  btnZoomIn.onclick  = function() { applyZoom(1); };
+  if (btnZoomOut) btnZoomOut.onclick = function() { applyZoom(-1); };
+
+  // Set initial zoom label
+  var zLabelEl = document.getElementById('tl-zoom-label');
+  if (zLabelEl) zLabelEl.textContent = TL.zoomLabels[TL.zoomLevel];
+
+  // ── Hover tooltip ──
+  var tooltipEl = document.getElementById('tl-tooltip');
+  var canvasEl  = document.getElementById('tl-canvas');
+  if (canvasEl && tooltipEl) {
+    function getEventAtPos(clientX, clientY) {
+      var sw2 = document.getElementById('tl-scroll-wrap');
+      var rect = canvasEl.getBoundingClientRect();
+      var xOnCanvas = clientX - rect.left + sw2.scrollLeft;
+      var yOnCanvas = clientY - rect.top;
+      var ci = Math.floor(xOnCanvas / TL.colW);
+      if (ci < 0 || ci >= TL.dias.length) return null;
+      var day = TL.dias[ci];
+      var ri  = Math.floor((yOnCanvas - TL.padTop) / TL.rowH);
+      if (ri < 0 || ri >= D.cuentas.length) return null;
+      var cu  = D.cuentas[ri];
+      // Find events for this day+account
+      var evs = day.eventos.filter(function(e){ return e.cuentaId === cu.id; });
+      if (!evs.length) return null;
+      return { evs: evs, day: day, cu: cu, ci: ci, ri: ri };
+    }
+
+    canvasEl.addEventListener('mousemove', function(e) {
+      var hit = getEventAtPos(e.clientX, e.clientY);
+      if (!hit) { tooltipEl.classList.add('hidden'); return; }
+      var evs = hit.evs;
+      var html = evs.map(function(ev) {
+        var signo = ev.tipo === 'Ingreso' ? '+' : ev.tipo === 'Gasto' ? '−' : '';
+        var col   = ev.tipo === 'Ingreso' ? 'var(--green)' : ev.tipo === 'Gasto' ? 'var(--red)' : 'var(--text2)';
+        return '<div class="tl-tooltip-name">' + esc(ev.nombre) + (ev.origen === 'prog' ? ' 📅' : '') + '</div>' +
+               '<div class="tl-tooltip-amount" style="color:' + col + '">' + signo + fmt(ev.importe) + '</div>';
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:4px 0">');
+      html += '<div class="tl-tooltip-meta">' + hit.day.fecha + ' · ' + esc(hit.cu.nombre) + '</div>';
+      tooltipEl.innerHTML = html;
+      tooltipEl.classList.remove('hidden');
+      // Position tooltip
+      var sw2   = document.getElementById('tl-scroll-wrap');
+      var rect  = sw2.getBoundingClientRect();
+      var tipX  = e.clientX - rect.left + sw2.scrollLeft + 12;
+      var tipY  = e.clientY - rect.top + 12;
+      if (tipX + 160 > sw2.scrollLeft + sw2.clientWidth) tipX -= 180;
+      tooltipEl.style.left = tipX + 'px';
+      tooltipEl.style.top  = tipY + 'px';
     });
 
-    // Cerrar popup al clicar fuera
-    document.addEventListener('click', function(e) {
-      if (!popup.classList.contains('hidden') && !popup.contains(e.target) && e.target !== canvas) {
-        popup.classList.add('hidden');
+    canvasEl.addEventListener('mouseleave', function() {
+      tooltipEl.classList.add('hidden');
+    });
+
+    // ── Click to open detail/edit ──
+    canvasEl.addEventListener('click', function(e) {
+      var hit = getEventAtPos(e.clientX, e.clientY);
+      if (!hit || !hit.evs.length) return;
+      var ev = hit.evs[0];
+      if (ev.origen === 'prog' && ev.id) {
+        openDetail('prog', ev.id);
+      } else if (ev.origen === 'real' && ev.id) {
+        openDetail('tx', ev.id);
       }
     });
 
-    // Botón Transacción
-    document.getElementById('tl-popup-tx').onclick = function() {
-      popup.classList.add('hidden');
-      openModalTx();
-      // Preseleccionar fecha y cuenta
-      document.getElementById('tx-fecha').value = TL.clickFecha || today();
-      if (TL.clickCuenta) document.getElementById('tx-cuenta-origen').value = TL.clickCuenta;
-    };
-
-    // Botón Programada
-    document.getElementById('tl-popup-prog').onclick = function() {
-      popup.classList.add('hidden');
-      openModalProg();
-      // Preseleccionar fecha y cuenta
-      document.getElementById('prog-inicio').value = TL.clickFecha || today();
-      if (TL.clickCuenta) document.getElementById('prog-cuenta').value = TL.clickCuenta;
-    };
-
-    // Hover en botones del popup
-    [document.getElementById('tl-popup-tx'), document.getElementById('tl-popup-prog')].forEach(function(btn) {
-      btn.addEventListener('mouseenter', function() { btn.style.background = 'rgba(77,143,255,.15)'; });
-      btn.addEventListener('mouseleave', function() { btn.style.background = 'none'; });
-    });
+    // Touch support for tooltip
+    canvasEl.addEventListener('touchstart', function(e) {
+      var t = e.touches[0];
+      var hit = getEventAtPos(t.clientX, t.clientY);
+      if (!hit) { tooltipEl.classList.add('hidden'); return; }
+      e.preventDefault();
+      var evs = hit.evs;
+      var html = evs.map(function(ev) {
+        var signo = ev.tipo === 'Ingreso' ? '+' : ev.tipo === 'Gasto' ? '−' : '';
+        var col   = ev.tipo === 'Ingreso' ? 'var(--green)' : ev.tipo === 'Gasto' ? 'var(--red)' : 'var(--text2)';
+        return '<div class="tl-tooltip-name">' + esc(ev.nombre) + '</div>' +
+               '<div class="tl-tooltip-amount" style="color:' + col + '">' + signo + fmt(ev.importe) + '</div>';
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:4px 0">');
+      html += '<div class="tl-tooltip-meta">' + hit.day.fecha + ' · ' + esc(hit.cu.nombre) + '</div>';
+      tooltipEl.innerHTML = html;
+      tooltipEl.classList.remove('hidden');
+      var sw2  = document.getElementById('tl-scroll-wrap');
+      var rect = sw2.getBoundingClientRect();
+      tooltipEl.style.left = (t.clientX - rect.left + sw2.scrollLeft + 12) + 'px';
+      tooltipEl.style.top  = (t.clientY - rect.top - 80) + 'px';
+      // Tap to open detail
+      setTimeout(function() {
+        tooltipEl.classList.add('hidden');
+        if (hit.evs[0].id) {
+          var ev = hit.evs[0];
+          if (ev.origen === 'prog') openDetail('prog', ev.id);
+          else if (ev.origen === 'real') openDetail('tx', ev.id);
+        }
+      }, 600);
+    }, { passive: false });
   }
 }
 
@@ -1659,7 +1646,6 @@ function drawTimeline() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  var isDark = true;
   var clrBg      = '#0d1320';
   var clrBg2     = '#111827';
   var clrBorder  = 'rgba(255,255,255,.07)';
@@ -1672,114 +1658,164 @@ function drawTimeline() {
   var clrYellow  = '#ffc04d';
   var rowColors  = [clrBlue, clrGreen, clrYellow, '#a78bfa', '#f87171'];
 
-  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var hoy      = new Date(); hoy.setHours(0,0,0,0);
   var todayStr = fmtDate(hoy);
 
   // ── Background rows ──
   cuentas.forEach(function(cu, ri) {
-    var y = padTop + ri * rowH;
     ctx.fillStyle = ri % 2 === 0 ? clrBg : clrBg2;
-    ctx.fillRect(0, y, canvas.width, rowH);
-    // Row label (account name) — drawn on top later
+    ctx.fillRect(0, padTop + ri * rowH, canvas.width, rowH);
   });
 
-  // ── Column headers (dates) + vertical lines ──
-  ctx.font = '10px system-ui, sans-serif';
+  // ── Column headers + vertical lines ──
   ctx.textAlign = 'center';
   dias.forEach(function(day, ci) {
-    var x    = ci * colW;
-    var d    = new Date(day.fecha + 'T12:00:00');
+    var x       = ci * colW;
+    var d       = new Date(day.fecha + 'T12:00:00');
     var isToday = day.fecha === todayStr;
     var isMon   = d.getDay() === 1;
     var isFirst = d.getDate() === 1;
 
-    // Today highlight column
     if (isToday) {
       ctx.fillStyle = clrToday;
       ctx.fillRect(x, 0, colW, canvas.height);
     }
-
-    // Vertical grid lines
     ctx.strokeStyle = clrBorder;
     ctx.lineWidth   = isFirst ? 1.5 : 0.5;
     ctx.beginPath(); ctx.moveTo(x, padTop); ctx.lineTo(x, canvas.height); ctx.stroke();
 
-    // Date label
     if (isFirst || isMon || isToday || ci === 0) {
       ctx.fillStyle = isToday ? clrBlue : (isFirst ? clrText : clrText2);
-      ctx.font = isFirst ? 'bold 10px system-ui' : '10px system-ui, sans-serif';
-      var label = isFirst ? d.toLocaleString('es',{month:'short',day:'numeric'}) : String(d.getDate());
-      ctx.fillText(label, x + colW/2, padTop - 6);
+      ctx.font      = isFirst ? 'bold 10px system-ui' : '10px system-ui, sans-serif';
+      ctx.fillText(isFirst ? d.toLocaleString('es',{month:'short',day:'numeric'}) : String(d.getDate()), x + colW/2, padTop - 6);
     }
   });
 
-  // ── Saldo lines per account ──
-  cuentas.forEach(function(cu, ri) {
-    var color  = rowColors[ri % rowColors.length];
-    var y0     = padTop + ri * rowH;
-    var yMid   = y0 + rowH/2;
+  // ── Per-account saldo lines ──
+  // First pass: collect warnings about future negative balances
+  var negativoAvisos = [];
 
-    // Collect saldo values to determine range
-    var saldoVals = dias.map(function(d){ return d.saldos[cu.id] || 0; });
-    var minS = Math.min.apply(null, saldoVals);
-    var maxS = Math.max.apply(null, saldoVals);
+  cuentas.forEach(function(cu, ri) {
+    var color = rowColors[ri % rowColors.length];
+    var y0    = padTop + ri * rowH;
+    var pad   = rowH * 0.12;
+
+    var saldoVals = dias.map(function(d){ return d.saldos[cu.id] !== undefined ? d.saldos[cu.id] : 0; });
+    var minS  = Math.min.apply(null, saldoVals);
+    var maxS  = Math.max.apply(null, saldoVals);
+    // Ensure zero is always visible in range
+    minS = Math.min(minS, 0);
+    maxS = Math.max(maxS, 0);
     var range = maxS - minS || 1;
-    var pad   = rowH * 0.15;
 
     function yForSaldo(s) {
       return y0 + pad + (1 - (s - minS) / range) * (rowH - pad*2);
     }
+    var yZero = yForSaldo(0);
 
-    // Draw line
+    // ── Red zone below zero ──
+    if (minS < 0) {
+      ctx.fillStyle = 'rgba(255,92,106,.08)';
+      ctx.fillRect(0, yZero, canvas.width, (y0 + rowH - pad) - yZero);
+      // Zero line
+      ctx.strokeStyle = 'rgba(255,92,106,.3)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(0, yZero); ctx.lineTo(canvas.width, yZero); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ── Check for future negative saldos ──
+    var todayIdx = dias.findIndex(function(d){ return d.fecha === todayStr; });
+    for (var fi = todayIdx; fi < dias.length; fi++) {
+      var fs = dias[fi].saldos[cu.id];
+      if (fs !== undefined && fs < 0) {
+        negativoAvisos.push({ cuenta: cu.nombre, fecha: dias[fi].fecha, saldo: fs });
+        break; // solo el primero por cuenta
+      }
+    }
+
+    // ── Account name label ──
+    ctx.fillStyle = color;
+    ctx.font      = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(cu.nombre, 4, y0 + 12);
+    ctx.textAlign = 'center';
+
+    // ── Saldo line — two segments: positive (color) and negative (red) ──
+    // Positive segment
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth   = 2;
     ctx.lineJoin    = 'round';
+    var inPositive = null;
     dias.forEach(function(day, ci) {
+      var s = day.saldos[cu.id] !== undefined ? day.saldos[cu.id] : 0;
       var x = ci * colW + colW/2;
-      var y = yForSaldo(day.saldos[cu.id] || 0);
-      if (ci === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      var y = yForSaldo(s);
+      if (s >= 0) {
+        if (inPositive === false) { ctx.stroke(); ctx.beginPath(); ctx.strokeStyle = color; ctx.moveTo(x, y); }
+        else if (inPositive === null) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        inPositive = true;
+      } else {
+        if (inPositive === true) { ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.strokeStyle = clrRed; ctx.moveTo(x, y); }
+        else if (inPositive === null) { ctx.strokeStyle = clrRed; ctx.moveTo(x, y); }
+        else ctx.lineTo(x, y);
+        inPositive = false;
+      }
     });
     ctx.stroke();
 
-    // Draw event dots
+    // ── Event dots ──
     dias.forEach(function(day, ci) {
       var evs = day.eventos.filter(function(e){ return e.cuentaId === cu.id; });
       if (!evs.length) return;
+      var s   = day.saldos[cu.id] !== undefined ? day.saldos[cu.id] : 0;
       var x   = ci * colW + colW/2;
-      var y   = yForSaldo(day.saldos[cu.id] || 0);
-      var hasIn  = evs.some(function(e){return e.tipo==='Ingreso' || e.tipo==='TransfEntrada';});
-      var hasOut = evs.some(function(e){return e.tipo==='Gasto' || e.tipo==='TransfSalida';});
-      var dotColor = hasIn && hasOut ? clrYellow : hasIn ? clrGreen : hasOut ? clrRed : clrBlue;
+      var y   = yForSaldo(s);
+      var hasIn  = evs.some(function(e){return e.tipo==='Ingreso';});
+      var hasOut = evs.some(function(e){return e.tipo==='Gasto';});
+      var dotColor = hasIn && hasOut ? clrYellow : hasIn ? clrGreen : clrRed;
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, Math.PI*2);
-      ctx.fillStyle   = dotColor;
-      ctx.strokeStyle = clrBg;
-      ctx.lineWidth   = 1.5;
+      ctx.fillStyle = dotColor; ctx.strokeStyle = clrBg; ctx.lineWidth = 1.5;
       ctx.fill(); ctx.stroke();
     });
-
-    // Row label on left (fixed — we'll overlay with HTML)
   });
 
-  // ── Horizontal row dividers ──
+  // ── Row dividers ──
   cuentas.forEach(function(cu, ri) {
     var y = padTop + (ri+1) * rowH;
-    ctx.strokeStyle = clrBorder;
-    ctx.lineWidth   = 1;
+    ctx.strokeStyle = clrBorder; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   });
+
+  // ── Store warnings in TL for header display ──
+  TL.negativoAvisos = negativoAvisos;
+  updateNegativoAvisos();
 }
 
-function updateCursorLine() {
+function updateNegativoAvisos() {
+  var el = document.getElementById('tl-avisos');
+  if (!el) return;
+  var avisos = TL.negativoAvisos || [];
+  if (!avisos.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = avisos.map(function(a) {
+    return '<span class="tl-aviso-chip">⚠️ ' + esc(a.cuenta) + ' en negativo el ' + fmtDateEs(a.fecha) + ' (' + fmt(a.saldo) + ')</span>';
+  }).join('');
+}
+
+
+function updateCursorLine(exactX) {
   var line = document.getElementById('tl-cursor-line');
   if (!line) return;
   var wrap = document.getElementById('tl-scroll-wrap');
   if (!wrap) return;
-  // Cursor fijo en el centro visible del scroll-wrap
-  var centerX = wrap.scrollLeft + wrap.clientWidth / 2;
-  line.style.left = centerX + 'px';
-  line.style.transform = 'translateX(-50%)';
+  // Always pin to center of visible area
+  var x = (exactX !== undefined) ? exactX : (wrap.scrollLeft + wrap.clientWidth / 2);
+  line.style.left = x + 'px';
 }
 
 function updateCursorInfo() {
@@ -1818,13 +1854,9 @@ function updateCursorInfo() {
     } else {
       var html = '';
       day.eventos.forEach(function(ev) {
-        var cls, signo, label;
-        if (ev.tipo === 'Ingreso')       { cls = 'ingreso'; signo = '+'; label = ev.nombre; }
-        else if (ev.tipo === 'Gasto')    { cls = 'gasto';   signo = '−'; label = ev.nombre; }
-        else if (ev.tipo === 'TransfSalida')  { cls = 'gasto';   signo = '⇄−'; label = ev.nombre; }
-        else if (ev.tipo === 'TransfEntrada') { cls = 'ingreso'; signo = '⇄+'; label = ev.nombre; }
-        else { cls = ''; signo = ''; label = ev.nombre; }
-        html += '<div class="tl-mov-chip ' + cls + '">' + esc(label) + ' ' + signo + fmt(ev.importe) + (ev.origen==='prog' ? ' 📅' : '') + '</div>';
+        var cls = ev.tipo === 'Ingreso' ? 'ingreso' : ev.tipo === 'Gasto' ? 'gasto' : '';
+        var signo = ev.tipo === 'Ingreso' ? '+' : ev.tipo === 'Gasto' ? '−' : '';
+        html += '<div class="tl-mov-chip ' + cls + '">' + esc(ev.nombre) + ' ' + signo + fmt(ev.importe) + (ev.origen==='prog' ? ' 📅' : '') + '</div>';
       });
       movsEl.innerHTML = html;
     }
@@ -2380,7 +2412,6 @@ function setStatsPeriod(meses) {
 //  NAVEGACIÓN
 // ══════════════════════════════════════════════════════
 function navigateTo(page) {
-  if (State.page === 'timeline' && page !== 'timeline') TL._scrollBound = false;
   State.page = page;
   closeDetail();
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
